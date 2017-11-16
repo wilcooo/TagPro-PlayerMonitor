@@ -27,9 +27,9 @@ tagpro.ready(function () {
     const textHLshift = -2;     // relative horizontal shift of text on the left of a ball (red team)
     const textHRshift = 25;     // relative horizontal shift of text on the right of a ball (blue team)
 
-    const left_to_mid  = -150;           // Distance of the red/left teamList from the middle
-    const right_to_mid = 120;            // Distance of the blue/right teamList from the middle
-    const dist_to_bot  = -space;         // Distance above the bottom of the screen
+    const left_to_mid  = -130;  // Distance of the red/left teamList from the middle
+    const right_to_mid = 120;   // Distance of the blue/right teamList from the middle
+    const dist_to_bot  = -10;   // Distance above the bottom of the screen
 
     const flag_size = size;
     const flag_x    = 10;
