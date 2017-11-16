@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          TagPro Player Monitor
-// @version       2.1
+// @version       2.0
 // @author        bash# ; Ko
 // @namespace     http://www.reddit.com/user/bash_tp/
 // @description   Shows an on-screen list of players in the game and their current status
@@ -9,9 +9,50 @@
 // @include       http://*.newcompte.fr:*
 // @downloadURL   https://github.com/wilcooo/TagPro-PlayerMonitor/raw/master/tppm.user.js
 // @supportURL    https://www.reddit.com/message/compose/?to=Wilcooo
-// @website       https://www.reddit.com/r/TagPro/comments/7cvx2c/userscript_4_newupdated_scripts/?sort=new
+// @website       https://redd.it/6pe5e9
 // @license       MIT
 // ==/UserScript==
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//     ### --- OPTIONS --- ###                                                            //
+////////////////////////////////////////////////////////////////////////////////////////  //
+                                                                                      //  //
+// When set to true, the regular 'taken-flag-indicators' are hidden.                  //  //
+// This script shows who has the flag, so with this option double info is hidden.     //  //
+var hide_flagTaken = true;                                                            //  //
+                                                                                      //  //
+// If you dare, you can edit the constants below to manipulate this script even more. //  //
+                                                                                      //  //
+////////////////////////////////////////////////////////////////////////////////////////  //
+//                                                     ### --- END OF OPTIONS --- ###     //
+////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+//////////////////////////////////////
+// SCROLL FURTHER AT YOUR OWN RISK! //
+//////////////////////////////////////
+
+
+
+
+
+var short_name = 'monitor';            // An alphabetic (no spaces/numbers) distinctive name for the script.
+var version = GM_info.script.version;  // The version number is automatically fetched from the metadata.
+tagpro.ready(function(){ if (!tagpro.scripts) tagpro.scripts = {}; tagpro.scripts[short_name]={version:version};});
+console.log('START: ' + GM_info.script.name + ' (v' + version + ' by ' + GM_info.script.author + ')');
+
+
+
+
+
 
 tagpro.ready(function () {
 
@@ -27,8 +68,8 @@ tagpro.ready(function () {
     const textHLshift = -2;     // relative horizontal shift of text on the left of a ball (red team)
     const textHRshift = 25;     // relative horizontal shift of text on the right of a ball (blue team)
 
-    const left_to_mid  = -130;  // Distance of the red/left teamList from the middle
-    const right_to_mid = 120;   // Distance of the blue/right teamList from the middle
+    const left_to_mid  = -133;  // Distance of the red/left teamList from the middle
+    const right_to_mid = 115;   // Distance of the blue/right teamList from the middle
     const dist_to_bot  = -10;   // Distance above the bottom of the screen
 
     const flag_size = size;
@@ -85,8 +126,8 @@ tagpro.ready(function () {
 
     // Hide the flagTaken indicators
 
-    tagpro.renderer.updateFlagsFromPlayer = function() {};
-    tagpro.renderer.resetFlagStatuses();
+    if (hide_flagTaken)
+        tagpro.renderer.updateFlagsFromPlayer = function() {};
 
 
 
