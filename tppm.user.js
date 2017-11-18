@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          TagPro Player Monitor
-// @version       2.0
+// @version       2.1
 // @author        bash# ; Ko
 // @namespace     http://www.reddit.com/user/bash_tp/
 // @description   Shows an on-screen list of players in the game and their current status
@@ -130,6 +130,20 @@ tagpro.ready(function () {
         tagpro.renderer.updateFlagsFromPlayer = function() {};
 
 
+    function getPlayer(player) {
+
+        return {
+            name:   player.name,
+            flag:   player.flag,
+            dead:   player.dead,
+            bomb:   player.bomb,
+            tagpro: player.tagpro,
+            grip:   player.grip,
+            //speed:  player.speed,
+            team:   player.team,
+            id:     player.id,
+        };
+    }
 
 
 
@@ -140,18 +154,14 @@ tagpro.ready(function () {
         var players = [];
 
         for (var playerId in tagpro.players) {
+
             if (!tagpro.players.hasOwnProperty(playerId)) continue;
-            if (tagpro.players[playerId].team != team)    continue;
 
             var player = tagpro.players[playerId];
-            players.push({
-                name:   player.name,
-                flag:   player.flag,
-                dead:   player.dead,
-                bomb:   player.bomb,
-                tagpro: player.tagpro,
-                grip:   player.grip,
-            });
+
+            if (player.team != team)    continue;
+
+            players.push(getPlayer(player));
         }
 
         return players;
@@ -163,50 +173,100 @@ tagpro.ready(function () {
 
     // Create PIXI containers for both player lists
 
-    var playerList = new PIXI.DisplayObjectContainer();
+    var playerList = new PIXI.Container();
     tagpro.renderer.layers.ui.addChild(playerList);
 
-    var redList = new PIXI.DisplayObjectContainer();
-    redList.x = ($("#viewport").width() / 2) + left_to_mid;
-    redList.y = $("#viewport").height() + dist_to_bot;
+    var redList = new PIXI.Container();
+    redList.x = (tagpro.renderer.vpWidth / 2) + left_to_mid;
+    redList.y = tagpro.renderer.vpHeight + dist_to_bot;
     playerList.addChild(redList);
 
-    var blueList = new PIXI.DisplayObjectContainer();
-    blueList.x = ($("#viewport").width() / 2) + right_to_mid;
-    blueList.y = $("#viewport").height() + dist_to_bot;
+    var blueList = new PIXI.Container();
+    blueList.x = (tagpro.renderer.vpWidth / 2) + right_to_mid;
+    blueList.y = tagpro.renderer.vpHeight + dist_to_bot;
     playerList.addChild(blueList);
 
-    var teamLists =
+    teamLists =
         {
             1: redList,
             2: blueList,
         };
 
 
-    // This function gets called when the browser window resizes
-    // It moves the playerlists to the right location
-
-    var org_resize = tagpro.renderer.resizeAndCenterView;
-    tagpro.renderer.resizeAndCenterView = function() {
-        redList.x = ($("#viewport").width() / 2) + left_to_mid;
-        redList.y = $("#viewport").height() + dist_to_bot;
-        blueList.x = ($("#viewport").width() / 2) + right_to_mid;
-        blueList.y = $("#viewport").height() + dist_to_bot;
-        org_resize();
-    };
-
-
 
 
     // The rolling_bomb graphics are stored here, so that they can be updated (animation)
-    var rolling_bombs = [];
+    var rolling_bombs = {};
     var org_UIupdate = tagpro.ui.update;
     tagpro.ui.update = function () {
         org_UIupdate();
         for (var b in rolling_bombs) {
-            rolling_bombs[b].bomb.alpha = (rolling_bombs[b].player.dead ? 0.375 : 0.75)*Math.abs(Math.sin(performance.now() / 150));
+            rolling_bombs[b].alpha = (tagpro.players[b].dead ? 0.375 : 0.75)*Math.abs(Math.sin(performance.now() / 150));
         }
     };
+
+
+    // Update a single player
+
+    function drawPlayer(player) {
+
+        if (typeof player.monitor === 'undefined') {
+            player.monitor = new PIXI.Container();
+        }
+
+        player.monitor.removeChildren();
+
+        // Draw ball
+        tagpro.tiles.draw(player.monitor, ballsprite[player.team], { x: 0, y: 0 }, size, size, player.dead ? 0.5 : 1);
+
+        // Draw bomb (rolling bomb)
+        if (player.bomb) {
+            var bomb = new PIXI.Graphics();
+            bomb.beginFill(bomb_color, (player.dead ? 0.375 : 0.75)*Math.abs(Math.sin(performance.now() / 150)) );
+            bomb.drawCircle(size/2, size/2, size/2);
+
+            player.monitor.addChild(bomb);
+
+            rolling_bombs[player.id] = bomb;
+        } else delete rolling_bombs[player.id];
+
+        // Draw tagpro
+        if (player.tagpro) {
+            var tp = new PIXI.Graphics();
+            tp.lineStyle(tagpro_thick, tagpro_color, player.dead ? 0.5 : 1 );
+            tp.drawCircle(size/2, size/2, size/2);
+
+            player.monitor.addChild(tp);
+        }
+
+        // Draw grip (juke juice)
+        if (player.grip) {
+            tagpro.tiles.draw(player.monitor, 'grip' , { x: grip_x, y: grip_y }, grip_size, grip_size, player.dead ? 0.5 : 1);
+        }
+
+        // Draw speed (a deprecated powerup)
+        //if (player.speed) {
+        //    tagpro.tiles.draw(player.monitor, 'speed' , { x: speed_x, y: speed_y }, speed_size, speed_size, player.dead ? 0.5 : 1);
+        //}
+
+        // Draw flag/potato
+        if (player.flag && !player.dead) {
+            tagpro.tiles.draw(player.monitor, flagsprite[player.flag]+(player.potatoFlag ? 'potato':'flag') , { x: flag_x, y: flag_y }, flag_size, flag_size);
+        }
+
+        // Draw name
+        var name = new PIXI.Text(player.name, style[player.team]);
+
+        if (player.team == 1) name.x = textHLshift - name.width;
+        if (player.team == 2) name.x = textHRshift;
+
+        name.y     = textVshift;
+        name.alpha = player.dead ? 0.5 : 1;
+
+        player.monitor.addChild(name);
+
+    }
+
 
 
 
@@ -214,87 +274,75 @@ tagpro.ready(function () {
 
     // Update either the red or blue list
 
-    function updateTeamList(team) {
+    function orderTeamList(team) {
 
         var teamList = teamLists[team];
 
-        while (teamList.children.length)
-            teamList.removeChild(teamList.children[0]);
+        teamList.removeChildren();
 
-        var players = getPlayers(team);
+        var count = 0;
 
-        for (var i = 0; i < players.length; i++) {
-            var y = - space * i;
+        for (var i in tagpro.players) {
 
-            if (players.length > i) {
+            var player = tagpro.players[i];
 
-                var player = players[i];
+            if (player.team != team)    continue;
 
-                // Draw ball
-                tagpro.tiles.draw(teamList, ballsprite[team], { x: 0, y: y }, size, size, player.dead ? 0.5 : 1);
+            if (!player.monitor) {
+                drawPlayer(player);
+            }
 
-                // Draw bomb (rolling bomb)
-                if (player.bomb) {
-                    var bomb = new PIXI.Graphics();
-                    bomb.beginFill(bomb_color, (player.dead ? 0.375 : 0.75)*Math.abs(Math.sin(performance.now() / 150)) );
-                    bomb.drawCircle(size/2, y + size/2, size/2);
+            teamList.addChild(player.monitor);
+            player.monitor.y = - space * (++count);
+        }
 
-                    teamList.addChild(bomb);
+    }
 
-                    rolling_bombs.push( {bomb:bomb,player:player} );
-                }
 
-                // Draw tagpro
-                if (player.tagpro) {
-                    var tp = new PIXI.Graphics();
-                    tp.lineStyle(tagpro_thick, tagpro_color, player.dead ? 0.5 : 1 );
-                    tp.drawCircle(size/2, y + size/2, size/2);
 
-                    teamList.addChild(tp);
-                }
 
-                // Draw grip (juke juice)
-                if (player.grip) {
-                    tagpro.tiles.draw(teamList, 'grip' , { x: grip_x, y: y + grip_y }, grip_size, grip_size, player.dead ? 0.5 : 1);
-                }
+    // This function gets called when the browser window resizes
+    // It moves the playerlists to the right location
 
-                // Draw speed (a deprecated powerup)
-                if (player.speed) {
-                    tagpro.tiles.draw(teamList, 'speed' , { x: speed_x, y: y + speed_y }, speed_size, speed_size, player.dead ? 0.5 : 1);
-                }
+    var org_alignUI = tagpro.ui.alignUI;
+    tagpro.ui.alignUI = function() {
+        redList.x = (tagpro.renderer.vpWidth / 2) + left_to_mid;
+        redList.y = tagpro.renderer.vpHeight + dist_to_bot;
+        blueList.x = (tagpro.renderer.vpWidth / 2) + right_to_mid;
+        blueList.y = tagpro.renderer.vpHeight + dist_to_bot;
+        org_alignUI();
+    };
 
-                // Draw flag/potato
-                if (player.flag && !player.dead) {
-                    tagpro.tiles.draw(teamList, flagsprite[player.flag]+(player.potatoFlag ? 'potato':'flag') , { x: flag_x, y: y + flag_y }, flag_size, flag_size);
-                }
 
-                // Draw name
-                var name = new PIXI.Text(player.name, style[team]);
 
-                if (team == 1) name.x = textHLshift - name.width;
-                if (team == 2) name.x = textHRshift;
 
-                name.y     = y + textVshift;
-                name.alpha = player.dead ? 0.5 : 1;
 
-                teamList.addChild(name);
+    tagpro.socket.on("p", function(data) {
 
+        if (data instanceof Array) {
+            var player = tagpro.players[data[0].id];
+            drawPlayer(player);
+            orderTeamList(player.team);
+            return;
+        }
+
+        for (var p in data.u) {
+            var player = tagpro.players[data.u[p].id];
+            var old_json = player.json;
+            player.json = JSON.stringify(getPlayer(player));
+            if (player.json != old_json) {
+                drawPlayer(player);
             }
         }
-    }
 
+    });
 
+    tagpro.socket.on("playerLeft", function(data) {
+        var player = tagpro.players[data];
+        delete player.monitor;
+        orderTeamList(player.team);
+    });
 
-
-
-
-    function redrawPlayerList() {
-        rolling_bombs = [];
-        updateTeamList(1);
-        updateTeamList(2);
-    }
-
-    tagpro.socket.on("mapupdate", redrawPlayerList);
-    tagpro.socket.on("p",         redrawPlayerList);
+    setInterval(function() {orderTeamList(1); orderTeamList(2);}, 3000);
 
 });
