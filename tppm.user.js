@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          TagPro Player Monitor
-// @version       2.1
+// @version       2.2
 // @author        bash# ; Ko
 // @namespace     http://www.reddit.com/user/bash_tp/
 // @description   Shows an on-screen list of players in the game and their current status
@@ -23,6 +23,19 @@
 // When set to true, the regular 'taken-flag-indicators' are hidden.                  //  //
 // This script shows who has the flag, so with this option double info is hidden.     //  //
 var hide_flagTaken = true;                                                            //  //
+                                                                                      //  //
+// Position; where to put the Player Monitor. You have these 11 choices:              //  //
+//    'top-left';  'top-mid';  'top-right';    'top-split';                           //  //
+//    'mid-left';              'mid-right';    'mid-split';                           //  //
+//    'bot-left';  'bot-mid';  'bot-right';    'bot-split';                           //  //
+// Make sure to not make any typos!                                                   //  //
+var position = 'bot-mid';                                                             //  //
+                                                                                      //  //
+// Order; in what order to put the teammembers? Choose between:                       //  //
+//    'constant';    When you don't want the balls to change position                 //  //
+//    'score';       The same order as on the scoreboard                              //  //
+// Don't worry, the list will only update every 3 seconds                             //  //
+var order = 'constant';                                                               //  //
                                                                                       //  //
 // If you dare, you can edit the constants below to manipulate this script even more. //  //
                                                                                       //  //
@@ -51,79 +64,134 @@ console.log('START: ' + GM_info.script.name + ' (v' + version + ' by ' + GM_info
 
 
 
+// CONSTANTS
+
+const size        = 16;     // Size of a ball icon
+const space       = 18;     // Vertical space per name+icon
+const textVshift  = 0;      // relative vertical shift of text
+const textHLshift = -2;     // relative horizontal shift of text on the left of a ball
+const textHRshift = 25;     // relative horizontal shift of text on the right of a ball
+
+const flag_size = size;     // size of the flag icon next to an FC
+const flag_x    = 10;       // Position of the flag, relative to the ball
+const flag_y    = 0;
+
+const grip_size = 10;       // size of the Juke Juice icon
+const grip_x    = -1;       // relative position
+const grip_y    = 8;
+
+const speed_size  = 10;     // size of the Top Speed icon (a deprecated TagPro powerup)
+const speed_x     = -1;     // relative position
+const speed_y     = -3;
+
+const tagpro_color = 0x00FF00;  // Color of the (usually green) TagPro powerup circle
+const tagpro_thick = 1.5;        // Thickness of that circle
+
+// Tip, use : https://www.google.com/search?q=pick+color
+
+const bomb_color = 0xFFFF00;    // Color of the flashing RollingBomb
+
+const style =     // The style of the text (1: red, 2: blue)
+      {
+          1: {
+              fontSize:        "8pt",
+              fontWeight:      "bold",
+              strokeThickness: 3,
+              fill:            0xFFB5BD,       // text-color (Tip: https://www.google.com/search?q=pick+color)
+          },
+          2: {
+              fontSize:        "8pt",
+              fontWeight:      "bold",
+              strokeThickness: 3,
+              fill:            0xCFCFFF,
+          },
+      };
+
+const presets = {    // 1: red team ,  2: blue team
+    'top-left' : {
+        1 : {  x:10, y:10,  },
+        2 : {  x:10, y:10 + 4.5*space,  },
+    },
+    'mid-left' : {
+        1 : {  x:10, y:-0.25*space, anchor : {x:0, y:0.5}, bottomToTop: true,  },
+        2 : {  x:10, y: 0.25*space, anchor : {x:0, y:0.5},  },
+    },
+    'bot-left' : {
+        1 : {  x:10, y:-10 - 5.5*space, anchor : {x:0, y:1}, bottomToTop: true,  },
+        2 : {  x:10, y:-10 - space,     anchor : {x:0, y:1}, bottomToTop: true,  },
+    },
+    'top-mid' : {
+        1 : {  x:-25, y:10, anchor : {x:0.5, y:0}, leftText: true,  },
+        2 : {  x:5,   y:10, anchor : {x:0.5, y:0},  },
+    },
+    'bot-mid' : {
+        1 : {  x:-135, y:-10 - space, anchor : {x:0.5, y:1}, bottomToTop: true, leftText: true,  },
+        2 : {  x: 115, y:-10 - space, anchor : {x:0.5, y:1}, bottomToTop: true,  },
+    },
+    'top-right' : {
+        1 : {  x:-30, y:10,             anchor : {x:1, y:0}, leftText: true,  },
+        2 : {  x:-30, y:10 + 4.5*space, anchor : {x:1, y:0}, leftText: true,  },
+    },
+    'mid-rigth' : {
+        1 : {  x:-30, y:-0.25*space, anchor : {x:1, y:0.5}, bottomToTop: true, leftText: true,  },
+        2 : {  x:-30, y: 0.25*space, anchor : {x:1, y:0.5},                    leftText: true,  },
+    },
+    'bot-right' : {
+        1 : {  x:-30, y:-10 - 5.5*space, anchor : {x:1, y:1}, bottomToTop: true, leftText: true,  },
+        2 : {  x:-30, y:-10 - space,     anchor : {x:1, y:1}, bottomToTop: true, leftText: true,  },
+    },
+    'top-split' : {
+        1 : {  x:10,  y:10,  },
+        2 : {  x:-30, y:10, anchor : {x:1, y:0}, leftText: true, },
+    },
+    'mid-split' : {
+        1 : {  x:10,  y:-2*space, anchor : {x:0, y:0.5},  },
+        2 : {  x:-30, y:-2*space, anchor : {x:1, y:0.5}, leftText: true,  },
+    },
+    'bot-split' : {
+        1 : {  x:10,  y:-10 - space, anchor : {x:0, y:1}, bottomToTop: true,  },
+        2 : {  x:-30, y:-10 - space, anchor : {x:1, y:1}, bottomToTop: true, leftText: true,  },
+    },
+    'your-preset' : {             // A preset to experiment with!
+        1 : {  x:0, y:0,  },
+        2 : {  x:0, y:0,  },
+    },
+};
+
+// EXPLANATION OF THE PRESETS:
+//   'x' and 'y' form the position of the player monitor
+//   'anchor' is the reference point from which the 'x' and 'y' above are calculated.
+//     anchors 'x' and 'y' are position of the reference point, relative to the viewport size. (so 0.5 is in the middle of the screen)
+//
+//   The position described above is the position of the first ball in the player monitor.
+//     The next balls are usually drawn below it, but when 'bottomToTop' is true, they are drawn above the first one.
+//
+//   'leftText' makes the name of the ball appear on the left side of the ball.
+//
+//   You may add a preset to the list, and select it in the options in the top of this script.
+
+
+
+
+
+const preset = presets[position] || presets["bot-mid"];   // If no valid preset is chosen, fallback to 'bot-mid'
+
+const flagsprite =
+      {
+          1: "red",      // Note: 'flag' or 'potato' gets added to this later in this script
+          2: "blue",
+          3: "yellow",
+      };
+const ballsprite =
+      {
+          1: "redball",
+          2: "blueball",
+      };
+
 
 
 
 tagpro.ready(function () {
-
-
-    if (PIXI.VERSION.replace(/[^\d.-]/g, '') < "4.0.0") {
-        console.log('TP Player Monitor: PIXI version not supported');
-        return;
-    }
-
-
-
-    // CONSTANTS
-
-    const size        = 16;     // Size of a ball icon
-    const space       = 18;     // Vertical space per name+icon
-    const textVshift  = 0;      // relative vertical shift of text
-    const textHLshift = -2;     // relative horizontal shift of text on the left of a ball (red team)
-    const textHRshift = 25;     // relative horizontal shift of text on the right of a ball (blue team)
-
-    const left_to_mid  = -133;  // Distance of the red/left teamList from the middle
-    const right_to_mid = 115;   // Distance of the blue/right teamList from the middle
-    const dist_to_bot  = -10;   // Distance above the bottom of the screen
-
-    const flag_size = size;
-    const flag_x    = 10;
-    const flag_y    = 0;
-
-    const grip_size = 10;
-    const grip_x    = -1;
-    const grip_y    = 8;
-
-    const speed_size  = 10;
-    const speed_x     = -1;
-    const speed_y     = -3;
-
-    const tagpro_color = 65280;
-    const tagpro_thick = 1.5;
-
-    const bomb_color = 16776960;
-
-    const redColor  = "#FFB5BD";
-    const blueColor = "#CFCFFF";
-
-    const flagsprite =
-          {
-              1: "red",      // Note: 'flag' or 'potato' gets added to this later in this script
-              2: "blue",
-              3: "yellow",
-          };
-    const ballsprite =
-          {
-              1: "redball",
-              2: "blueball",
-          };
-
-    const style =
-        {
-            1: new PIXI.TextStyle({
-                fontSize:        "8pt",
-                fontWeight:      "bold",
-                strokeThickness: 3,
-                fill:            redColor,
-            }),
-            2: new PIXI.TextStyle({
-                fontSize:        "8pt",
-                fontWeight:      "bold",
-                strokeThickness: 3,
-                fill:            blueColor,
-            }),
-        };
-
 
 
 
@@ -177,24 +245,36 @@ tagpro.ready(function () {
 
     // Create PIXI containers for both player lists
 
-    var playerList = new PIXI.Container();
-    tagpro.renderer.layers.ui.addChild(playerList);
-
     var redList = new PIXI.Container();
-    redList.x = (tagpro.renderer.vpWidth / 2) + left_to_mid;
-    redList.y = tagpro.renderer.vpHeight + dist_to_bot;
-    playerList.addChild(redList);
+    tagpro.renderer.layers.ui.addChild(redList);
 
     var blueList = new PIXI.Container();
-    blueList.x = (tagpro.renderer.vpWidth / 2) + right_to_mid;
-    blueList.y = tagpro.renderer.vpHeight + dist_to_bot;
-    playerList.addChild(blueList);
+    tagpro.renderer.layers.ui.addChild(blueList);
 
-    teamLists =
+    var teamLists =
         {
             1: redList,
             2: blueList,
         };
+
+    tagpro.ui.sprites.redPlayerMonitor = redList;
+    tagpro.ui.sprites.bluePlayerMonitor = blueList;
+
+
+    // This function gets called when the browser window resizes
+    // It moves the playerlists to the right location
+
+    var org_alignUI = tagpro.ui.alignUI;
+    tagpro.ui.alignUI = function() {
+        redList.x = ( preset[1].anchor ? (tagpro.renderer.vpWidth * preset[1].anchor.x) : 0 ) + preset[1].x;
+        redList.y = ( preset[1].anchor ? (tagpro.renderer.vpHeight * preset[1].anchor.y) : 0 ) + preset[1].y;
+        blueList.x = ( preset[2].anchor ? (tagpro.renderer.vpWidth * preset[2].anchor.x) : 0 ) + preset[2].x;
+        blueList.y = ( preset[2].anchor ? (tagpro.renderer.vpHeight * preset[2].anchor.y) : 0 ) + preset[2].y;
+        org_alignUI();
+    };
+
+    tagpro.ui.alignUI();
+
 
 
 
@@ -261,8 +341,8 @@ tagpro.ready(function () {
         // Draw name
         var name = new PIXI.Text(player.name, style[player.team]);
 
-        if (player.team == 1) name.x = textHLshift - name.width;
-        if (player.team == 2) name.x = textHRshift;
+        if (preset[player.team].leftText)   name.x = textHLshift - name.width;
+        else                                name.x = textHRshift;
 
         name.y     = textVshift;
         name.alpha = player.dead ? 0.5 : 1;
@@ -284,7 +364,7 @@ tagpro.ready(function () {
 
         teamList.removeChildren();
 
-        var count = 0;
+        var teamPlayers = [];
 
         for (var i in tagpro.players) {
 
@@ -296,26 +376,29 @@ tagpro.ready(function () {
                 drawPlayer(player);
             }
 
-            teamList.addChild(player.monitor);
-            player.monitor.y = - space * (++count);
+            teamPlayers.push(player);
+        }
+
+        var sign = 2 * Boolean(preset[team].bottomToTop) - 1;
+
+        switch (order) {
+            case 'score':
+                teamPlayers.sort( function(p1,p2) { return sign * p1.score - sign * p2.score; });
+                // This sorts the teamPlayers list based on the .score of every player
+                break;
+            default:
+                // When something else, or 'constant' is chosen, the order of player id's is conserved
+                // which is the order that they joined the game.
+        }
+
+        var count = 0;
+
+        for (var p in teamPlayers) {
+            teamList.addChild(teamPlayers[p].monitor);
+            teamPlayers[p].monitor.y = - sign * space * (count++);
         }
 
     }
-
-
-
-
-    // This function gets called when the browser window resizes
-    // It moves the playerlists to the right location
-
-    var org_alignUI = tagpro.ui.alignUI;
-    tagpro.ui.alignUI = function() {
-        redList.x = (tagpro.renderer.vpWidth / 2) + left_to_mid;
-        redList.y = tagpro.renderer.vpHeight + dist_to_bot;
-        blueList.x = (tagpro.renderer.vpWidth / 2) + right_to_mid;
-        blueList.y = tagpro.renderer.vpHeight + dist_to_bot;
-        org_alignUI();
-    };
 
 
 
