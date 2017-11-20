@@ -57,6 +57,10 @@ console.log('START: ' + GM_info.script.name + ' (v' + version + ' by ' + GM_info
 tagpro.ready(function () {
 
 
+    if (PIXI.VERSION.replace(/[^\d.-]/g, '') < "4.0.0") {
+        console.log('TP Player Monitor: PIXI version not supported');
+        return;
+    }
 
 
 
