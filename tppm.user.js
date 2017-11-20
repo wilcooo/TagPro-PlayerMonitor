@@ -34,7 +34,6 @@ var position = 'bot-mid';                                                       
 // Order; in what order to put the teammembers? Choose between:                       //  //
 //    'constant';    When you don't want the balls to change position                 //  //
 //    'score';       The same order as on the scoreboard                              //  //
-// Don't worry, the list will only update every 3 seconds                             //  //
 var order = 'constant';                                                               //  //
                                                                                       //  //
 // If you dare, you can edit the constants below to manipulate this script even more. //  //
