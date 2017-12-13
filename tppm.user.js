@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          TagPro Player Monitor
-// @version       2.2
+// @version       2.3
 // @author        bash# ; Ko
 // @namespace     http://www.reddit.com/user/bash_tp/
 // @description   Shows an on-screen list of players in the game and their current status
@@ -34,7 +34,12 @@ var position = 'bot-mid';                                                       
 // Order; in what order to put the teammembers? Choose between:                       //  //
 //    'constant';    When you don't want the balls to change position                 //  //
 //    'score';       The same order as on the scoreboard                              //  //
+// Don't worry, the list will only update every 3 seconds                             //  //
 var order = 'constant';                                                               //  //
+                                                                                      //  //
+// Whether to show if someone is honking.                                             //  //
+//   This function requires the Honk script.                                          //  //
+var show_honk = true;                                                                 //  //
                                                                                       //  //
 // If you dare, you can edit the constants below to manipulate this script even more. //  //
                                                                                       //  //
@@ -71,23 +76,30 @@ const textVshift  = 0;      // relative vertical shift of text
 const textHLshift = -2;     // relative horizontal shift of text on the left of a ball
 const textHRshift = 25;     // relative horizontal shift of text on the right of a ball
 
+const show_ball = true;
+
+const show_flag = true;
 const flag_size = size;     // size of the flag icon next to an FC
 const flag_x    = 10;       // Position of the flag, relative to the ball
 const flag_y    = 0;
 
+const show_grip = true;
 const grip_size = 10;       // size of the Juke Juice icon
 const grip_x    = -1;       // relative position
 const grip_y    = 8;
 
+const show_speed = false;   // This won't work unless they put the topspeed pup back in the game (and even then probably not)
 const speed_size  = 10;     // size of the Top Speed icon (a deprecated TagPro powerup)
 const speed_x     = -1;     // relative position
 const speed_y     = -3;
 
+const show_tagpro = true;
 const tagpro_color = 0x00FF00;  // Color of the (usually green) TagPro powerup circle
 const tagpro_thick = 1.5;        // Thickness of that circle
 
 // Tip, use : https://www.google.com/search?q=pick+color
 
+const show_bomb = true;
 const bomb_color = 0xFFFF00;    // Color of the flashing RollingBomb
 
 const style =     // The style of the text (1: red, 2: blue)
@@ -187,6 +199,7 @@ const ballsprite =
           2: "blueball",
       };
 
+const honksprite = PIXI.Texture.fromImage("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4CAYAAAA5ZDbSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAZdEVYdFNvZnR3YXJlAHBhaW50Lm5ldCA0LjAuMTZEaa/1AAACiUlEQVR4Xu3bMa7bQAwG4RwkZe5/s5zBiYoAgjFFJJPL1fgvPjxgDAjksn4/Xq/XV/n989ffP/ybEUar47j/vP9mhdEqB5bLgeVyYLkcWC4HlsuB5XJguRxYLgeWy4HlcmC5HFguB5bLgW940qM9ZdbKOTFecR6mYqBOT5jzPGPFnBiveB+oYqguu894nq9qToxXdQzWYef5zrNVzojxjq4Bq+041/u7Vc6I8a7OQa263wzjJ7oHNlnxVhg/tWLwp1v1RhgrrFrgiVa+DcYqKxd5itVvgrHS6oV2NvEWGKtNLLabqTfA2GFqwR1M7o6xy+SiU6Z3xthpctkJ0/ti7Da58GrTu2IMD4zhgTE8MIYHxvDAGB4YwwNjeGAMD4zhgTE8MIYHxvDAGB4YwwNjeGAMD4zhgTE8MIYHxvDAGB4YwwNjeGAMD4zhgTHmnP/V5VPH91o+GvfQe36q5aPvg8f/o/e86/hey0djHxjDA2N4YAwPjOGBMTwwhgfG8MAYHhjDA2N4YAwPjOGBMTwwhgfG8MAYHhjDA2N4YAwPjOGBMTwwhgfG8MAYHhjDA2N4YOz2Tf/qMr0rxk7nhaeWXml6X4xd3pedWHi16Z0xdphedNLk7hirTS64i6k3wFhparEdTbwFxioTC+1u9ZtgrLB6kSdZ+TYYP7Vygada9UYYP7FqcIMVb4XxrhUD23S/GcY7ugetsONMh/d3q5wT41WdA1bZebbDeb7KOTFe0TVYtd3nO5xnrJoV4xXVA3V5woyH85wVs2K8onKYTk+Z81A5K0ajykd7EoxGObBcDiyXA8vlwHI5sFwOLJcDy+XAcjmwXA4slwPL5cByObBcDvwFvu24r9frxx9ThG6n1YCdggAAAABJRU5ErkJggg==");
 
 
 
@@ -203,39 +216,21 @@ tagpro.ready(function () {
 
     function getPlayer(player) {
 
-        return {
-            name:   player.name,
-            flag:   player.flag,
-            dead:   player.dead,
-            bomb:   player.bomb,
-            tagpro: player.tagpro,
-            grip:   player.grip,
-            //speed:  player.speed,
-            team:   player.team,
-            id:     player.id,
+        var state = {
+            name:      player.name,
+            dead:      player.dead,
+            team:      player.team,
+            id:        player.id,
         };
-    }
 
+        if (show_flag)   state.flag      = player.flag;
+        if (show_bomb)   state.bomb      = player.bomb;
+        if (show_tagpro) state.tagpro    = player.tagpro;
+        if (show_grip)   state.grip      = player.grip;
+        if (show_speed)  state.speed     = player.speed;
+        if (show_honk)   state.isHonking = player.isHonking;
 
-
-    // This function gets all players on a team
-
-    function getPlayers(team) {
-
-        var players = [];
-
-        for (var playerId in tagpro.players) {
-
-            if (!tagpro.players.hasOwnProperty(playerId)) continue;
-
-            var player = tagpro.players[playerId];
-
-            if (player.team != team)    continue;
-
-            players.push(getPlayer(player));
-        }
-
-        return players;
+        return state;
     }
 
 
@@ -314,12 +309,23 @@ tagpro.ready(function () {
         } else delete rolling_bombs[player.id];
 
         // Draw tagpro
-        if (player.tagpro) {
+        if (show_honk && player.tagpro) {
             var tp = new PIXI.Graphics();
             tp.lineStyle(tagpro_thick, tagpro_color, player.dead ? 0.5 : 1 );
             tp.drawCircle(size/2, size/2, size/2);
 
             player.monitor.addChild(tp);
+        }
+
+        // Draw honk
+        if (player.isHonking && show_honk) {
+            var honk = new PIXI.Sprite(honksprite);
+            honk.width  = honksprite.width  * (size/40);
+            honk.height = honksprite.height * (size/40);
+            honk.x = ( -honk.width  + size ) / 2;
+            honk.y = ( -honk.height + size ) / 2;
+
+            player.monitor.addChild(honk);
         }
 
         // Draw grip (juke juice)
@@ -382,7 +388,7 @@ tagpro.ready(function () {
 
         switch (order) {
             case 'score':
-                teamPlayers.sort( function(p1,p2) { return sign * p1.score - sign * p2.score; });
+                teamPlayers.sort( (p1,p2) => sign * ( p1.score - p2.score ) );
                 // This sorts the teamPlayers list based on the .score of every player
                 break;
             default:
@@ -406,14 +412,14 @@ tagpro.ready(function () {
     tagpro.socket.on("p", function(data) {
 
         if (data instanceof Array) {
-            var player = tagpro.players[data[0].id];
+            let player = tagpro.players[data[0].id];
             drawPlayer(player);
             orderTeamList(player.team);
             return;
         }
 
         for (var p in data.u) {
-            var player = tagpro.players[data.u[p].id];
+            let player = tagpro.players[data.u[p].id];
             var old_json = player.json;
             player.json = JSON.stringify(getPlayer(player));
             if (player.json != old_json) {
@@ -428,6 +434,12 @@ tagpro.ready(function () {
         delete player.monitor;
         orderTeamList(player.team);
     });
+
+    org_drawHonk = tagpro.drawHonk || (() => 0);
+    tagpro.drawHonk = function(player, remove) {
+        org_drawHonk(player, remove);
+        drawPlayer(player);
+    };
 
     setInterval(function() {orderTeamList(1); orderTeamList(2);}, 3000);
 
