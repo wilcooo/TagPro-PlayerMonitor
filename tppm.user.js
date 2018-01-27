@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          TagPro Player Monitor
-// @version       2.5
+// @version       2.6
 // @author        bash# ; Ko
 // @namespace     http://www.reddit.com/user/bash_tp/
 // @description   Shows an on-screen list of players in the game and their current status
@@ -221,12 +221,13 @@ tagpro.ready(function () {
     // Hide the flagTaken indicators
 
     if (hide_flagTaken)
-        tagpro.renderer.updateFlagsFromPlayer = function() {};
+        tagpro.renderer.updateFlagsFromPlayer = function() { console.warn('The flag indicators are blocked by the TagPro Player Monitor script'); };
 
     // Hide TagPro's new Player Indicators
 
-    if (hide_playerIndicators)
-        tagpro.ui.sprites.playerIndicators.visible = false;
+    if (hide_playerIndicators) {
+        tagpro.ui.updatePlayerIndicators = function() { console.warn('The player indicators are blocked by the TagPro Player Monitor script'); };
+    }
 
     function getPlayer(player) {
 
@@ -291,7 +292,7 @@ tagpro.ready(function () {
     if (show_bomb) {
         var rolling_bombs = {};
 
-        // Rewriting the TagPro's ui.update function to include the rendering of the RBs 
+        // Rewriting the TagPro's ui.update function to include the rendering of the RBs
         var org_UIupdate = tagpro.ui.update;
         tagpro.ui.update = function () {
             org_UIupdate();
