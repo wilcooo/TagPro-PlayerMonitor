@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          TagPro Player Monitor
-// @version       2.4
+// @version       2.5
 // @author        bash# ; Ko
 // @namespace     http://www.reddit.com/user/bash_tp/
 // @description   Shows an on-screen list of players in the game and their current status
@@ -23,6 +23,12 @@
 // When set to true, the regular 'taken-flag-indicators' are hidden.                  //  //
 // This script shows who has the flag, so with this option double info is hidden.     //  //
 var hide_flagTaken = true;                                                            //  //
+                                                                                      //  //
+// The devs of TagPro added ball indicators to TagPro, which is awesome!!             //  //
+// However, this script still has the advantage of showing                            //  //
+// names, pups, deaths and flags. So you can now hide the native TagPro               //  //
+// indicators with this option.                                                       //  //
+var hide_playerIndicators = true;                                                     //  //
                                                                                       //  //
 // Position; where to put the Player Monitor. You have these 11 choices:              //  //
 //    'top-left';  'top-mid';  'top-right';    'top-split';                           //  //
@@ -217,6 +223,10 @@ tagpro.ready(function () {
     if (hide_flagTaken)
         tagpro.renderer.updateFlagsFromPlayer = function() {};
 
+    // Hide TagPro's new Player Indicators
+
+    if (hide_playerIndicators)
+        tagpro.ui.sprites.playerIndicators.visible = false;
 
     function getPlayer(player) {
 
