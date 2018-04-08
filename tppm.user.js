@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name          TagPro Player Monitor
-// @version       2.6
+// @version       2.7
 // @author        bash# ; Ko
 // @namespace     http://www.reddit.com/user/bash_tp/
 // @description   Shows an on-screen list of players in the game and their current status
@@ -297,7 +297,7 @@ tagpro.ready(function () {
         tagpro.ui.update = function () {
             org_UIupdate();
             for (var b in rolling_bombs) {
-                rolling_bombs[b].alpha = (tagpro.players[b].dead ? 0.375 : 0.75)*Math.abs(Math.sin(performance.now() / 150));
+                rolling_bombs[b].alpha = (tagpro.players[b] && tagpro.players[b].dead ? 0.375 : 0.75)*Math.abs(Math.sin(performance.now() / 150));
             }
         };
     }
